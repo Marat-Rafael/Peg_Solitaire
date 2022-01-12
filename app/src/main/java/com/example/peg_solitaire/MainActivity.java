@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -35,6 +36,8 @@ public class MainActivity extends AppCompatActivity {
 //            {0,0,1,1,1,0,0},
 //    };
 
+
+    private static final String TAG = "JUEGO";
     public TextView[][] matrixTextView;
 
     public ArrayList<TextView> arrayListCasillasJugables;
@@ -42,8 +45,11 @@ public class MainActivity extends AppCompatActivity {
     public ArrayList<TextView> arrayListCassillasSaltoPermitido;
 
     public TextView casillaElegida;
+    public TextView auxiliar;
+    public boolean terminado;
+    public boolean saltoRealizado = false;
 
-    public static boolean casillaEligida = false;
+    // public static boolean booleanCasillaEligida = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
         arrayListCasillasJugables = new ArrayList<>();
         arrayListCassillasVacias = new ArrayList<>();
         arrayListCassillasSaltoPermitido = new ArrayList<>();
+        terminado = false;
 
         // creamos matriz
         matrixTextView = new TextView[][]{
@@ -66,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         };
 
         juegoBase();
+        Log.d(TAG, "sale onCreate");
 
     }
 
@@ -76,11 +84,17 @@ public class MainActivity extends AppCompatActivity {
         llenarMatrix();
         eliminarCasillasEsquina();
         generarCasillaVaciaEnCentro();
+
         buscarTodasCasillasJugables();
-        detectarPulsada();
+        detectarBotonPulsada();
+
 
         // hay que volver a buscar casillas jugables, NO VA BE !?
-        buscarTodasCasillasJugables();
+//        while (true) {
+//            buscarTodasCasillasJugables();
+//            detectarBotonPulsada();
+//        }
+
 
     }
 
@@ -145,8 +159,18 @@ public class MainActivity extends AppCompatActivity {
 //    }
 
 
+    public void buscar_y_detectar() {
+        buscarTodasCasillasJugables();
+        detectarBotonPulsada();
+    }
+
+    /**
+     * metodo para crear matriz bidimencional de TextView
+     */
     public void crearMatrix() {
+        Log.d(TAG, "entra crear matriz");
         matrixTextView = new TextView[][]{
+
                 {findViewById(R.id.tv_00), findViewById(R.id.tv_01), findViewById(R.id.tv_02), findViewById(R.id.tv_03), findViewById(R.id.tv_04), findViewById(R.id.tv_05), findViewById(R.id.tv_06)},
                 {findViewById(R.id.tv_10), findViewById(R.id.tv_11), findViewById(R.id.tv_12), findViewById(R.id.tv_13), findViewById(R.id.tv_14), findViewById(R.id.tv_15), findViewById(R.id.tv_16)},
                 {findViewById(R.id.tv_20), findViewById(R.id.tv_21), findViewById(R.id.tv_22), findViewById(R.id.tv_23), findViewById(R.id.tv_24), findViewById(R.id.tv_25), findViewById(R.id.tv_26)},
@@ -155,18 +179,29 @@ public class MainActivity extends AppCompatActivity {
                 {findViewById(R.id.tv_50), findViewById(R.id.tv_51), findViewById(R.id.tv_52), findViewById(R.id.tv_53), findViewById(R.id.tv_54), findViewById(R.id.tv_55), findViewById(R.id.tv_56)},
                 {findViewById(R.id.tv_60), findViewById(R.id.tv_61), findViewById(R.id.tv_62), findViewById(R.id.tv_63), findViewById(R.id.tv_64), findViewById(R.id.tv_65), findViewById(R.id.tv_66)},
         };
+        Log.d(TAG, "sale crear matriz");
     }
 
+    /**
+     * metodo para rellenar matriz de texto con sus valores correspondentes I J
+     * solo para identificar casillas
+     */
     public void llenarMatrix() {
+        Log.d(TAG, "entra llenar matriz");
         for (int i = 0; i < matrixTextView.length; i++) {
             for (int j = 0; j < matrixTextView[0].length; j++) {
                 cambiarBackground(matrixTextView[i][j], R.drawable.casilla_rellena);
                 matrixTextView[i][j].setText(i + " " + j);
             }
         }
+        Log.d(TAG, "sale llenar matriz");
     }
 
+    /**
+     * metodo para eliminar agunas casillas de las esquinas
+     */
     public void eliminarCasillasEsquina() {
+        Log.d(TAG, "entra eliminar esquinas matriz");
         for (int i = 0; i < matrixTextView.length; i++) {
             for (int j = 0; j < matrixTextView[0].length; j++) {
                 // primera esquina
@@ -187,11 +222,15 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
+        Log.d(TAG, "sale eliminar esquinas matriz");
     }
 
 
+    /**
+     * metodo para crear casilla vacia en el centro
+     */
     public void generarCasillaVaciaEnCentro() {
+        Log.d(TAG, "entra generar casilla vacia matriz");
         for (int i = 0; i < matrixTextView.length; i++) {
             for (int j = 0; j < matrixTextView[0].length; j++) {
                 if ((i == 3 && j == 3) && (matrixTextView[i][j].isEnabled())) {
@@ -200,146 +239,68 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+        Log.d(TAG, "sale generar casilla vacia matriz");
     }
 
 
     public void buscarTodasCasillasJugables() {
-        comprobarDosProximasCasillas_I();
-        comprobarDosProximasCasillas_J();
-        comprobarDosAnterioresCasillas_I();
-        comprobarDosAnterioresCasillas_J();
-    }
-
-    /**
-     * recorremos matris y comparamos todos 'i'
-     * comprabamos si casilla esta vacia ( background casilla_vacia ) y si es asi
-     * miramos PROXIMOS dos, si ambas son llenas de color ( background casilla_rellena )
-     * la segunda, despues de vacia ( i + 2 ) marcamos como casilla que puede jugar ( background casilla_jugable )
-     * < 0 1 1 >
-     */
-    public void comprobarDosProximasCasillas_I() {
+        Log.d(TAG, "entra buscar todas casillas jugables  --- V2 ---");
         for (int i = 0; i < matrixTextView.length; i++) {
             for (int j = 0; j < matrixTextView[0].length; j++) {
-                // para comparar drawable usamos getConstantState !!!
-                // aqui buscamos casilla vacia comparando lo que esta en background
+                // buscamos casilla vacia
                 if (matrixTextView[i][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_vacia, null).getConstantState())) {
-                    // Toast.makeText(this, "casilla libre " + i + j, Toast.LENGTH_SHORT).show();
+                    // I+2
                     // comprobamos que i + 2 no sale fuera de la matriz y es casilla activa
                     if ((i + 2 < matrixTextView.length) && (matrixTextView[i + 2][j].isEnabled())) {
-                        // comparamos que la proxima i esta llena
+                        // comparamos que  i + 1 esta llena
                         if (matrixTextView[i + 1][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
-                            // comparamos que si casilla tiene background de llena - asi que sin disponible para jugar
+                            // comprobamos que i + 2 esta rellena
                             if (matrixTextView[i + 2][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
                                 convertirCasilla_A_Jugable(matrixTextView[i + 2][j]);
-                                //animarRotate(matrixTextView[i+2][j]);
-                                arrayListCasillasJugables.add(matrixTextView[i + 2][j]);
-
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-
-
-    /**
-     * recorremos matris y comparamos todos 'i'
-     * comprabamos si casilla esta vacia ( background casilla_vacia ) y si es asi
-     * miramos dos ANTERIORES, si ambas son llenas de color ( background casilla_rellena )
-     * la segunda, despues de vacia (i - 2) marcamos como casilla que puede jugar ( background casilla_jugable )
-     * < 1 1 0 >
-     */
-    public void comprobarDosAnterioresCasillas_I() {
-        for (int i = 0; i < matrixTextView.length; i++) {
-            for (int j = 0; j < matrixTextView[0].length; j++) {
-                // para comparar drawable usamos getConstantState !!!
-                // aqui buscamos casilla vacia
-                if (matrixTextView[i][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_vacia, null).getConstantState())) {
-                    // Toast.makeText(this, "casilla libre " + i + j, Toast.LENGTH_SHORT).show();
-                    // comprobamos que la casiila no sale del campo y es enabled
-                    if ((i - 2 >= 0) && matrixTextView[i - 2][j].isEnabled()) {
-                        // comparamos que la proxima i esta llena
+                    // I-2
+                    // comprobamos que i - 2 no sale fuera de la matriz y es casilla activa
+                    if ((i - 2 >= 0) && (matrixTextView[i - 2][j].isEnabled())) {
+                        // comparamos que  i - 1 esta rellena
                         if (matrixTextView[i - 1][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
-                            // comparamos que segunda i esta llena, es la casiila que puede ser jugada
+                            // comprobamos que i - 2 esta rellena
                             if (matrixTextView[i - 2][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
+                                // cambiamos a jugable
                                 convertirCasilla_A_Jugable(matrixTextView[i - 2][j]);
-                                // animarRotate(matrixTextView[i-2][j]);
-                                arrayListCasillasJugables.add(matrixTextView[i - 2][j]);
                             }
                         }
                     }
-                }
-            }
-        }
-    }
+                    // J+2
+                    // comprobamos que j + 2 no sale fuera de bordes y estan activos
 
-
-    /**
-     * recorremos matris y comparamos todos 'J'
-     * comprabamos si casilla esta vacia ( background casilla_vacia ) y si es asi
-     * miramos PROXIMAS dos, si ambas son llenas de color ( background casilla_rellena )
-     * la segunda, despues de vacia ( j + 2 ) marcamos como casilla que puede jugar ( background casilla_jugable )
-     * < 0 >
-     * < 1 >
-     * < 1 >
-     */
-    public void comprobarDosProximasCasillas_J() {
-        for (int i = 0; i < matrixTextView.length; i++) {
-            for (int j = 0; j < matrixTextView[0].length; j++) {
-                // para comparar drawable usamos getConstantState !!!
-                // aqui buscamos casilla vacia
-                if (matrixTextView[i][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_vacia, null).getConstantState())) {
-                    // Toast.makeText(this, "casilla libre " + i + j, Toast.LENGTH_SHORT).show();
-                    // comprobamos que no sale del campo y isEnabled
-                    if ((j + 2 < matrixTextView[0].length) && (matrixTextView[i][j + 2].isEnabled())) {
-                        // comparamos que la proxima i esta llena
+                    if ((j + 2 <= matrixTextView[0].length) && matrixTextView[i][j + 2].isEnabled()) {
+                        // comprobamos que j + 1 es rellena
                         if (matrixTextView[i][j + 1].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
-                            // comparamos que segunda i esta llena, es la casiila que puede ser jugada
+                            // comprobamos j + 2 tiene que ser tambien rellena
                             if (matrixTextView[i][j + 2].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
+                                // convertimos en casilla jugable
                                 convertirCasilla_A_Jugable(matrixTextView[i][j + 2]);
-                                // animarRotate(matrixTextView[i][j + 2]);
-                                arrayListCasillasJugables.add(matrixTextView[i][j + 2]);
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-
-
-    /**
-     * recorremos matris y comparamos todos 'J'
-     * comprabamos si casilla esta vacia ( background casilla_vacia ) y si es asi
-     * miramos dos ANTERIORES, si ambas son llenas de color ( background casilla_rellena )
-     * la segunda, despues de vacia ( j - 2 )  marcamos como casilla que puede jugar ( background casilla_jugable )
-     * < 1 >
-     * < 1 >
-     * < 0 >
-     */
-    public void comprobarDosAnterioresCasillas_J() {
-        for (int i = 0; i < matrixTextView.length; i++) {
-            for (int j = 0; j < matrixTextView[0].length; j++) {
-                // para comparar drawable usamos getConstantState !!!
-                // aqui buscamos casilla vacia
-                if (matrixTextView[i][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_vacia, null).getConstantState())) {
-                    // Toast.makeText(this, "casilla libre " + i + j, Toast.LENGTH_SHORT).show();
-                    // comprobamos que no sale del campo de juego y isEnabled
+                    // J-2
+                    // comprobamos que j - 2 no sale del borde y esta habilitada
                     if ((j - 2 >= 0) && (matrixTextView[i][j - 2].isEnabled())) {
-                        // comparamos que la proxima i esta llena
-                        if (matrixTextView[i][j - 2].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
-                            // comparamos que segunda i esta llena, es la casiila que puede ser jugada
+                        // comprobamos que j - 1 es rellena
+                        if (matrixTextView[i][j - 1].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
+                            // comprobamos que j - 2 es relleno
                             if (matrixTextView[i][j - 2].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena, null).getConstantState())) {
+                                // si cumple - convertimos en jugable
                                 convertirCasilla_A_Jugable(matrixTextView[i][j - 2]);
-                                // animarRotate(matrixTextView[i][j - 2]);
-                                arrayListCasillasJugables.add(matrixTextView[i][j - 2]);
                             }
                         }
                     }
                 }
             }
         }
+        Log.d(TAG, "sale buscar todas casillas jugables  --- V2 ---");
     }
 
     private void animarRotate(TextView textView) {
@@ -349,42 +310,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    // metodo obsoleto
-    public void detectarCasillaPulsada() {
 
-        for (int i = 0; i < matrixTextView.length; i++) {
-            for (int j = 0; j < matrixTextView[0].length; j++) {
+    public void detectarBotonPulsada() {
+        Log.d(TAG, "entra detectar boton pulsado");
 
-                int finalI = i;
-                int finalJ = j;
-
-                matrixTextView[i][j].setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        // si es una casilla con dravable casilla_jugable la marcamos de otro color
-                        if (matrixTextView[finalI][finalJ].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_jugable, null).getConstantState())) {
-                            convertirCasilla_A_Selecionada(matrixTextView[finalI][finalJ]);
-                            // otra vez recorremos toda matriz y convertimos resto de jugables en casillas rellenas
-                            for (int i = 0; i < matrixTextView.length; i++) {
-                                for (int j = 0; j < matrixTextView[0].length; j++) {
-                                    if (matrixTextView[finalI][finalJ].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_jugable, null).getConstantState())) {
-
-                                        convertirCasilla_A_Rellenas(matrixTextView[finalI][finalJ]);
-                                    }
-                                }
-
-                            }
-
-                        }
-                    }
-                });
-            }
-        }
-
-
-    }
-
-    public void detectarPulsada() {
         for (int i = 0; i < arrayListCasillasJugables.size(); i++) {
 
             int finalI = i;
@@ -395,7 +324,7 @@ public class MainActivity extends AppCompatActivity {
                     // casilla elegida coje valor de la casilla pulsada
                     casillaElegida = findViewById(arrayListCasillasJugables.get(finalI).getId());
 
-                    // resto de casillas vonvertimos en casillas rellenas
+                    // resto de casillas convertimos en casillas rellenas
                     for (int i = 0; i < arrayListCasillasJugables.size(); i++) {
                         convertirCasilla_A_Rellenas(arrayListCasillasJugables.get(i));
                     }
@@ -410,7 +339,131 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
         }
+        Log.d(TAG, "sale detectar boton pulsado");
+
     }
+
+    /**
+     * Nuevo metodo para detectar elemento pulsado
+     *
+     * @return TextView pulsado
+     */
+    public TextView detectarBotonPulsada2() {
+        Log.d(TAG, "entra detectar boton pulsado -- V2 --");
+        // recorremos lista de casillas jugables
+        for (int i = 0; i < arrayListCasillasJugables.size(); i++) {
+            int finalI = i; // que es y porque me lo coloca ?¿?¿?
+            // y ponemos a la escucha
+            arrayListCasillasJugables.get(i).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    auxiliar = findViewById(arrayListCasillasJugables.get(finalI).getId());
+                }
+            });
+        }
+        // quitamos onClickListener a todos
+        eliminarListenerAlArrayList(arrayListCasillasJugables);
+        // limpiamos arraylist de casillasJugables
+        arrayListCasillasJugables.clear();
+        // devolvemos TextView que esta pulsada
+        Log.d(TAG, "sale detectar boton pulsado -- V2 --");
+        return auxiliar;
+
+    }
+
+    /**
+     * metodo para encontrar coordenadas de un TextView en la matriz
+     * devuelve un array con dos posiciones
+     * array[0] = i
+     * array[1] = j
+     *
+     * @param textView
+     */
+    public int[] buscarCoordenadasDelElemento(TextView textView) {
+        Log.d(TAG, "entra buscar coordenadasDelElemento");
+        int[] coordenadasEnMatriz = new int[2];
+        // buscamos en la matriz nuestro objeto
+        for (int i = 0; i < matrixTextView.length; i++) {
+            for (int j = 0; j < matrixTextView[0].length; j++) {
+                if (textView.getId() == matrixTextView[i][j].getId()) {
+                    coordenadasEnMatriz[0] = i;
+                    coordenadasEnMatriz[1] = j;
+                    return coordenadasEnMatriz;
+                }
+            }
+        }
+        mostrarToast("no se encuentran coordenadas del TextView");
+        Log.d(TAG, "sale buscarCoordenadasDelElemento");
+        return null;
+    }
+
+    /**
+     * Nuevo metodo para un concreto textView buscamos saltos permitidos
+     * tiene que cumplir 3 requestitos
+     * no sobrepasar borde
+     * casilla vecina (i+1,i-1,j+1,j-1) tiene que tener background 'rellena'
+     * casilla (i+2,i-2,j+2,j-2) tambien tiene que ser 'rellena'
+     *
+     * @param textView
+     */
+    public void buscarSaltosPermitidosParaUnaElementoconcreto(TextView textView) {
+        Log.d(TAG, "entra DetectarSaltosPermitidosParaUnelemento");
+        int[] coordenadas = buscarCoordenadasDelElemento(textView);
+        int coordenada_I = coordenadas[0];
+        int coordenada_J = coordenadas[1];
+
+        for (int i = 0; i < matrixTextView.length; i++) {
+            for (int j = 0; j < matrixTextView[0].length; j++) {
+                // comprobamos que no sobrepasa los borde izquerdo
+                if (coordenada_I - 2 >= 0) {
+                    // i - 1 es casilla rellena
+                    if (matrixTextView[i - 1][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                        // i - 2 es casilla rellena
+                        if (matrixTextView[i - 2][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                            // si cumple anterior - convertimos en casilla salto permitido
+                            convertirCasilla_A_Salto_Permitido(matrixTextView[i - 2][j]);
+
+                        }
+                    }
+                }
+                // comprobamos que no sobrepasa borde derecho
+                if (coordenada_I + 2 <= matrixTextView.length) {
+                    // si i + 1 es casilla rellena
+                    if (matrixTextView[i + 1][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                        // si j + 2 es casilla rellena
+                        if (matrixTextView[i + 2][j].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                            // si cumple anterior lo mostramos como casilla salto permitido
+                            convertirCasilla_A_Salto_Permitido(matrixTextView[i + 2][j]);
+                        }
+                    }
+                }
+                //  comprobamos que comprobamos que no sobrepasa borde de ariba
+                if (coordenada_J - 2 >= 0) {
+                    // comprobamos que j - 1 es casilla rellena
+                    if (matrixTextView[i][j - 1].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                        // comprobamos que j - 2 es casilla rellena
+                        if (matrixTextView[i][j - 2].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                            // si es asi convertimos en casilla salto permitido
+                            convertirCasilla_A_Salto_Permitido(matrixTextView[i][j - 2]);
+                        }
+                    }
+                }
+                // comprobamos que no sobrepasa borde debajo
+                if (coordenada_J + 2 <= matrixTextView[0].length) {
+                    // comprobamos que  j + 1 es rellena
+                    if (matrixTextView[i][j + 1].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                        // comprobamos j + 2 que es rellena
+                        if (matrixTextView[i][j + 2].getBackground().getConstantState().equals(getResources().getDrawable(R.drawable.casilla_rellena))) {
+                            // si cumple - convertimos en casilla salto permitido
+                            convertirCasilla_A_Salto_Permitido(matrixTextView[i][j + 2]);
+                        }
+                    }
+                }
+            }
+        }
+        Log.d(TAG, "sale DetectarSaltosPermitidosParaUnelemento");
+    }
+
 
     /**
      * Al arrayList borramos  OnClicklistener
@@ -418,17 +471,26 @@ public class MainActivity extends AppCompatActivity {
      * @param arrayList
      */
     public void eliminarListenerAlArrayList(ArrayList<TextView> arrayList) {
+        Log.d(TAG, "entra eliminarListenerAlArrayList");
         for (int i = 0; i < arrayList.size(); i++) {
             arrayList.get(i).setOnClickListener(null);
         }
+        Log.d(TAG, "sale eliminarListenerAlArrayList");
     }
 
+    /**
+     * metodo para detectar movimientos disponibles para una casilla selecionada
+     */
     private void calcularMovimientosDisponiblesParaCasillaElegida() {
+        Log.d(TAG, "entra CalcularMovimientosPermitidosParaCasillaElegida");
         calcularMovimientosDisponibles_I_masDos();
         calcularMovimientosDisponibles_J_masDos();
         calcularMovimientosDisponibles_I_menosDos();
         calcularMovimientosDisponibles_J_menosDos();
+        realizarSalto();
+        Log.d(TAG, "sale CalcularMovimientosPermitidosParaCasillaElegida");
 
+        buscarTodasCasillasJugables();
     }
 
     private void calcularMovimientosDisponibles_I_masDos() {
@@ -445,7 +507,7 @@ public class MainActivity extends AppCompatActivity {
                                 // añadimos al arrayDeSaltoPermitido para poner a la escucha
                                 arrayListCassillasSaltoPermitido.add(matrixTextView[i + 2][j]);
                                 // realizamos movimiento
-                                realizarSalto();
+                                // realizarSalto();
                             }
                         }
                     }
@@ -468,8 +530,7 @@ public class MainActivity extends AppCompatActivity {
                                 // añadimos al arrayDeSaltoPermitido para poner a la escucha
                                 arrayListCassillasSaltoPermitido.add(matrixTextView[i - 2][j]);
                                 // realizamos movimiento
-                                realizarSalto();
-
+                                // realizarSalto();
                             }
                         }
                     }
@@ -492,8 +553,7 @@ public class MainActivity extends AppCompatActivity {
                                 // añadimos al arrayDeSaltoPermitido para poner a la escucha
                                 arrayListCassillasSaltoPermitido.add(matrixTextView[i][j + 2]);
                                 // realizamos movimiento
-                                realizarSalto();
-
+                                // realizarSalto();
                             }
                         }
                     }
@@ -516,8 +576,7 @@ public class MainActivity extends AppCompatActivity {
                                 // añadimos al arrayDeSaltoPermitido para poner a la escucha
                                 arrayListCassillasSaltoPermitido.add(matrixTextView[i][j - 2]);
                                 // realizamos movimiento
-                                realizarSalto();
-
+                                // realizarSalto();
                             }
                         }
                     }
@@ -526,8 +585,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void realizarSalto() {
 
+    /**
+     * metodo que pone a la escucha a todos los casillas que pueden ser selecionadas.
+     * para esto usamos arrayList de casiilas que tienen salto permitido
+     */
+    private void realizarSalto() {
+        Log.d(TAG, "entra realizarSalto");
         for (int i = 0; i < arrayListCassillasSaltoPermitido.size(); i++) {
             arrayListCassillasSaltoPermitido.get(i).setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -537,19 +601,49 @@ public class MainActivity extends AppCompatActivity {
                     // recorremos matrix para identificar casilla del destino
                     int[] coordenadasDestino = identificarCasillaEnMatriz(view);
 
-                    int[] coordenadasCasillaBorrar = devuelveCasillaParaBorrar(coordenadasOrigen,coordenadasDestino);
-                    // repintamos  background de los tres a vacio
-                    matrixTextView[coordenadasCasillaBorrar[0]][coordenadasCasillaBorrar[1]].setBackgroundResource(R.drawable.casilla_vacia);
-                    matrixTextView[coordenadasOrigen[0]][coordenadasOrigen[1]].setBackgroundResource(R.drawable.casilla_vacia);
-                    matrixTextView[coordenadasDestino[0]][coordenadasDestino[1]].setBackgroundResource(R.drawable.casilla_vacia);
+                    int[] coordenadasCasillaBorrar = devuelveCoordenadasCasillaParaBorrar(coordenadasOrigen, coordenadasDestino);
 
+                    // repintamos  background de los tres
+                    convertirCasilla_A_Vacia(matrixTextView[coordenadasCasillaBorrar[0]][coordenadasCasillaBorrar[1]]);
+
+                    convertirCasilla_A_Vacia(matrixTextView[coordenadasOrigen[0]][coordenadasOrigen[1]]);
+
+                    convertirCasilla_A_Rellenas(matrixTextView[coordenadasDestino[0]][coordenadasDestino[1]]);
+
+                    //------------------------------------------------------------------------------
+                    //------------------------------------------------------------------------------
+                    // OJO !!! AQUI VOLVEMOS A BUSCAR  JUGADAS !!!!
+                    //------------------------------------------------------------------------------
+                    buscarTodasCasillasJugables();
+                    detectarBotonPulsada();
+                    //------------------------------------------------------------------------------
+                    //------------------------------------------------------------------------------
+
+
+                    // añadimos al arraylist casillas vacias (no lo uso de momento)
+                    //arrayListCassillasVacias.add(matrixTextView[coordenadasCasillaBorrar[0]][coordenadasCasillaBorrar[1]]);
                 }
             });
+
         }
+        // despues de realizar salto limpiamos arraylist de las  casillasSaltoPermitido y casillasJugables
+        arrayListCassillasSaltoPermitido.clear();
+        arrayListCasillasJugables.clear();
+
+
+        Log.d(TAG, "sale RealizarSalto");
 
     }
 
-    public int[] devuelveCasillaParaBorrar(int[] origen, int[] destino) {
+    /**
+     * metodo para calcular coordenadas de la casilla que esta entre origin y destino
+     *
+     * @param origen  coordenadas de la casilla de origen
+     * @param destino coordenadas de la casilla de destino
+     * @return devuelve coordenadas de la casilla que se borra
+     */
+    public int[] devuelveCoordenadasCasillaParaBorrar(int[] origen, int[] destino) {
+        Log.d(TAG, "entra devuelveCoordenadaCasillaParaborra");
         int i_origen = origen[0];
         int j_origen = origen[1];
 
@@ -578,6 +672,8 @@ public class MainActivity extends AppCompatActivity {
         }
         listaCoordenadasAdevolver[0] = i_resultado;
         listaCoordenadasAdevolver[1] = j_resultado;
+        Log.d(TAG, "sale devuelveCoordenadaCasillaParaBorrar");
+
         return listaCoordenadasAdevolver;
     }
 
@@ -586,9 +682,10 @@ public class MainActivity extends AppCompatActivity {
      * metodo para identificar una casilla en el matriz
      *
      * @param view vista
-     * @return devuelve vector coordenadas
+     * @return devuelve simple matriz con coordenadas de la casilla I J
      */
     private int[] identificarCasillaEnMatriz(View view) {
+        Log.d(TAG, "entra identificarCasillaEnMatriz");
         int[] listacoordenadas = new int[2];
         for (int i = 0; i < matrixTextView.length; i++) {
             for (int j = 0; j < matrixTextView[0].length; j++) {
@@ -599,6 +696,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         // mostrarToast("i=" + listacoordenadas[0] + " j=" + listacoordenadas[1]);
+        Log.d(TAG, "sale identificarCasillaEnMatriz");
         return listacoordenadas;
     }
 
@@ -608,19 +706,40 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void convertirCasilla_A_Rellenas(TextView textView) {
+        //Log.d(TAG, "entra convertirCasillaRellena");
         cambiarBackground(textView, R.drawable.casilla_rellena);
+        //Log.d(TAG, "sale convertirCasillaRellena");
     }
 
     public void convertirCasilla_A_Vacia(TextView textView) {
+        //Log.d(TAG, "entra convertirCasillaVacia");
         cambiarBackground(textView, R.drawable.casilla_vacia);
+        arrayListCassillasVacias.add(textView);
+        //Log.d(TAG, "sale convertirCasillaVacia");
     }
 
+    /**
+     * Metodo para cambiar fondo de la casilla a la casilla jugable
+     * y añadimos al arayList de las casillas jugables
+     *
+     * @param textView casilla que convertimos a casilla jugable
+     */
     public void convertirCasilla_A_Jugable(TextView textView) {
+        //Log.d(TAG, "entra convertirCasilla_Jugable");
         cambiarBackground(textView, R.drawable.casilla_jugable);
+        arrayListCasillasJugables.add(textView);
+        //Log.d(TAG, "sale convertirCasilla_Jugable");
+    }
+
+    public void convertirCasilla_A_Salto_Permitido(TextView textView) {
+        //Log.d(TAG, "entra convertirCasilla salto permitido");
+        cambiarBackground(textView, R.drawable.casilla_salto_permitido);
+        //Log.d(TAG, "sale convertirCasilla salto permitido");
     }
 
     public void convertirCasilla_A_Selecionada(TextView textView) {
         cambiarBackground(textView, R.drawable.casilla_selecionada);
+
     }
 
     private void convertirCasilla_A_Disable(TextView textView) {
